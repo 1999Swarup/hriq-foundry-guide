@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Build a Foundry IQ Agent — Step-by-Step (HRIQ / Meridian)</title>
+<style>
+  :root{
+    --bg:#0b1020;--bg2:#0f1630;--panel:#141d3b;--panel2:#1a2650;--ink:#eaf0ff;--mut:#9fb0d8;
+    --line:#26335f;--accent:#5b8cff;--accent2:#2fb3a6;--good:#37d39b;--warn:#ffcf6b;--code:#0a0f22;
+    --src:#c2410c;--kb:#0f766e;--fdry:#0369a1;--net:#6d28d9;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#1a2550 0,transparent 60%),
+    radial-gradient(1000px 600px at -10% 10%,#132a2b 0,transparent 55%),var(--bg);
+    color:var(--ink);font:15.5px/1.65 -apple-system,Segoe UI,Roboto,Inter,system-ui,sans-serif}
+  a{color:var(--accent)}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+  header{padding:46px 0 24px;text-align:center}
+  header .kick{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);font-weight:800}
+  header h1{font-size:34px;margin:10px 0 8px;line-height:1.2}
+  header h1 .g{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  header p{color:var(--mut);max-width:760px;margin:0 auto;font-size:16px}
+  .pills{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+  .pill{font-size:11.5px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--panel)}
+  /* TOC */
+  .toc{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin:22px 0 8px}
+  .toc a{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);
+    color:var(--ink);text-decoration:none;font-size:13.5px}
+  .toc a:hover{border-color:var(--accent);background:var(--panel2)}
+  .toc a b{color:var(--accent2);margin-right:6px}
+  section{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+    border-radius:16px;padding:22px 24px;margin:16px 0;scroll-margin-top:14px}
+  section h2{font-size:22px;margin:0 0 4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .stepnum{flex:0 0 34px;width:34px;height:34px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+    color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .goal{color:var(--mut);font-size:14px;margin:6px 0 14px}
+  h3{font-size:15px;margin:18px 0 8px;color:#cdd8ff}
+  .path{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;
+    color:#bcd0ff;margin:8px 0;font-family:Consolas,Menlo,monospace;overflow-wrap:anywhere}
+  .path b{color:var(--accent2)}
+  .note{border-left:3px solid var(--accent2);background:var(--panel2);border-radius:0 10px 10px 0;padding:10px 14px;
+    margin:12px 0;color:var(--mut);font-size:13.5px}
+  .warn{border-left-color:var(--warn)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+  th{background:var(--panel2);color:var(--mut);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  td code,.ic{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:1px 6px;
+    font-family:Consolas,Menlo,monospace;font-size:12.5px;color:#8ff0c8;overflow-wrap:anywhere}
+  .codewrap{position:relative;margin:10px 0}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px 14px;overflow:auto;
+    font-size:12.5px;line-height:1.5;font-family:Consolas,Menlo,monospace;color:#d6e2ff}
+  .copy{position:absolute;top:8px;right:8px;cursor:pointer;border:1px solid var(--line);background:var(--panel2);
+    color:var(--mut);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700}
+  .copy:hover{color:var(--ink);border-color:var(--accent)}
+  .tabs{display:flex;gap:6px;margin-top:8px}
+  .tab{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--mut);border-radius:8px 8px 0 0;
+    padding:6px 12px;font-size:12px;font-weight:700}
+  .tab.active{background:var(--code);color:var(--accent2);border-bottom-color:var(--code)}
+  .tabpane{display:none}.tabpane.active{display:block}
+  .mermaid{background:var(--code);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0;text-align:center;overflow:auto}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:8px;font-size:12px;color:var(--mut)}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
+  .done{margin-top:14px;padding:10px 14px;background:#12331f;border:1px solid #1c5b45;border-radius:10px;color:var(--good);font-size:13.5px;font-weight:600}
+  footer{text-align:center;color:var(--mut);font-size:12.5px;margin-top:30px}
+  .kbd{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kick">Meridian Group · Challenge 3 · learn-by-doing</div>
+  <h1>Build a <span class="g">Foundry IQ</span> Agent — Step by Step</h1>
+  <p>Follow this flowchart to create the whole thing yourself in the Azure &amp; Microsoft Foundry portals:
+  <b>5 Knowledge Sources → 3 Knowledge Bases → agentic retrieval → a Foundry agent with the MCP tool</b>.
+  Every exact resource name is given. No web app needed — this is the grounding stack the app just calls.</p>
+  <div class="pills">
+    <span class="pill">Search: foundry-iq-search5600</span>
+    <span class="pill">Project: agentfond-create-a-develop-1</span>
+    <span class="pill">5 indexes · 5 sources · 3 KBs · 4 agents</span>
+    <span class="pill">Keyless (Entra / managed identity)</span>
+  </div>
+</header>
+
+<!-- TARGET ARCHITECTURE -->
+<section id="arch">
+  <h2>The target architecture (what you're building)</h2>
+  <div class="goal">This is the shape from the diagram: one question → one agent → one MCP tool → a Knowledge Base
+  that fans hybrid queries across the 5 Knowledge Sources, reranks, and returns one cited answer.</div>
+  <div class="mermaid">
+flowchart LR
+    U["HR user asks<br/>ONE question"] --> AG
+    subgraph FDRY["Microsoft Foundry (hosted agent)"]
+      AG["Foundry agent<br/>hriq-hrbp-kb-agent<br/>PromptAgentDefinition + MCPTool"] --> MCP["MCP tool<br/>knowledge_base_retrieve"]
+    end
+    subgraph KB["Foundry IQ Knowledge Base (hriq-hrbp-kb)"]
+      P["1 · Plan → sub-queries"] --> R["2 · Retrieve (parallel)<br/>BM25 + HNSW vector"]
+      R --> K["3 · Rerank (semantic L2)<br/>+ keep citations"] --> S["4 · Synthesize<br/>one cited answer"]
+    end
+    subgraph SRC["5 Knowledge Sources (Azure AI Search)"]
+      S1["hriq-employment-law"]
+      S2["hriq-hr-policies"]
+      S3["hriq-job-architecture"]
+      S4["hriq-learning-development"]
+      S5["hriq-onboarding-offboarding"]
+    end
+    MCP --> P
+    R -->|hybrid queries| S1 & S2 & S3 & S4 & S5
+    S --> A["ONE cited answer<br/>jurisdiction-accurate"]
+    classDef src fill:#c2410c,stroke:#7c2d12,color:#fff;
+    classDef kb fill:#0f766e,stroke:#08403b,color:#fff;
+    classDef fdry fill:#0369a1,stroke:#083344,color:#fff;
+    class S1,S2,S3,S4,S5 src; class P,R,K,S kb; class AG,MCP fdry;
+  </div>
+</section>
+
+<!-- BUILD ORDER -->
+<section id="order">
+  <h2>The build order (do it in this sequence)</h2>
+  <div class="goal">Bottom-up: you can't make a Knowledge Base before its sources, or a source before its index.
+  Follow the arrows.</div>
+  <div class="mermaid">
+flowchart TB
+    A["Step 0<br/>Prereqs + sign in + RBAC"] --> B["Step 1<br/>Deploy 2 models<br/>chat + embedding"]
+    B --> C["Step 2<br/>Create 5 indexes<br/>HNSW + semantic"]
+    C --> D["Step 3<br/>Upload chunked docs<br/>into the 5 indexes"]
+    D --> E["Step 4<br/>Create 5 Knowledge Sources"]
+    E --> F["Step 5<br/>Create 3 Knowledge Bases"]
+    F --> G["Step 6<br/>Create 3 MCP connections"]
+    G --> H["Step 7<br/>Create 3 Foundry agents"]
+    H --> I["Step 8<br/>Grant runtime RBAC"]
+    I --> J["Step 9<br/>Test in the Playground"]
+    J --> K["Step 10 (optional)<br/>One unified agent<br/>hriq-kb over all 5"]
+    classDef s fill:#141d3b,stroke:#5b8cff,color:#eaf0ff;
+    class A,B,C,D,E,F,G,H,I,J,K s;
+  </div>
+  <div class="toc">
+    <a href="#s0"><b>0</b>Prerequisites &amp; RBAC</a>
+    <a href="#s1"><b>1</b>Deploy 2 models</a>
+    <a href="#s2"><b>2</b>Create 5 indexes</a>
+    <a href="#s3"><b>3</b>Upload chunked data</a>
+    <a href="#s4"><b>4</b>5 Knowledge Sources</a>
+    <a href="#s5"><b>5</b>3 Knowledge Bases</a>
+    <a href="#s6"><b>6</b>3 MCP connections</a>
+    <a href="#s7"><b>7</b>3 Foundry agents</a>
+    <a href="#s8"><b>8</b>Runtime RBAC</a>
+    <a href="#s9"><b>9</b>Test in Playground</a>
+    <a href="#s10"><b>10</b>Unified agent (optional)</a>
+    <a href="#cheat"><b>★</b>Names cheat sheet</a>
+  </div>
+</section>
+
+<!-- STEP 0 -->
+<section id="s0">
+  <h2><span class="stepnum">0</span> Prerequisites &amp; RBAC (do once)</h2>
+  <div class="goal">Sign in to the right tenant and give <b>yourself</b> the roles needed to author indexes, sources,
+  KBs and agents. (The running agent gets its own read-only role in Step 8.)</div>
+  <h3>Sign in (correct tenant matters — HRIQ lives in the microsoft.com tenant)</h3>
+  <div class="codewrap"><button class="copy">Copy</button><pre>az login --tenant 16b3c013-d300-468d-ac64-7eda0820b6d3
+az account set --subscription 4a751d0a-a8ef-44f2-b08f-05b8d87d959a</pre></div>
+  <h3>Roles YOU (build-time identity) need</h3>
+  <table>
+    <tr><th>Role</th><th>On which resource</th><th>Why</th></tr>
+    <tr><td>Foundry User</td><td>Foundry account <span class="ic">swarupmishra-learnv1-resource</span></td><td>Create agents, deploy models, call the data plane</td></tr>
+    <tr><td>Search Service Contributor</td><td>Search <span class="ic">foundry-iq-search5600</span></td><td>Create indexes, Knowledge Sources, Knowledge Bases</td></tr>
+    <tr><td>Search Index Data Contributor</td><td>Search <span class="ic">foundry-iq-search5600</span></td><td>Upload documents into indexes</td></tr>
+  </table>
+  <div class="note warn">⚠️ Do <b>not</b> use "Azure AI Developer" — it targets ML/Foundry <i>hubs</i>, not Foundry <i>projects</i>. Use <b>Foundry User</b>.</div>
+  <div class="done">✅ Done when: <span class="ic">az account show</span> shows tenant 16b3c013… and your user, and the 3 roles appear in <b>Access control (IAM)</b>.</div>
+</section>
+
+<!-- STEP 1 -->
+<section id="s1">
+  <h2><span class="stepnum">1</span> Deploy two models</h2>
+  <div class="goal">Foundry IQ needs a <b>chat model</b> (query planning + answer synthesis) and an <b>embedding model</b>
+  (to build the HNSW vectors + vectorize queries).</div>
+  <div class="path"><b>Foundry portal</b> → project <b>agentfond-create-a-develop-1</b> → left nav <b>Models</b> → <b>+ Deploy model</b></div>
+  <table>
+    <tr><th>Purpose</th><th>Model</th><th>Deployment name (use exactly)</th></tr>
+    <tr><td>Chat / synthesis (agent)</td><td>model-router</td><td><span class="ic">model-router</span></td></tr>
+    <tr><td>Chat for the KB reasoning</td><td>gpt-5</td><td><span class="ic">gpt-5</span></td></tr>
+    <tr><td>Embeddings (3072-dim)</td><td>text-embedding-3-large</td><td><span class="ic">text-embedding-3-large-2</span></td></tr>
+  </table>
+  <div class="note">The <b>Knowledge Base</b> requires a concrete model (<span class="ic">gpt-5</span>) — <span class="ic">model-router</span> is only allowed on the <b>agent</b>. The embedding deployment name here is <span class="ic">text-embedding-3-large-2</span>.</div>
+  <div class="done">✅ Done when: all three deployments show <b>Succeeded</b> under <b>Models</b>.</div>
+</section>
+
+<!-- STEP 2 -->
+<section id="s2">
+  <h2><span class="stepnum">2</span> Create the 5 search indexes (HNSW + semantic)</h2>
+  <div class="goal">One index per HR domain. Each holds the chunked text, plus filterable metadata, plus a
+  <b>vector field</b> indexed with the <b>HNSW</b> algorithm and an integrated <b>vectorizer</b> → this is what makes
+  retrieval <b>hybrid</b> (keyword BM25 + vector) with a <b>semantic reranker</b>.</div>
+  <div class="path"><b>Azure portal</b> → Search service <b>foundry-iq-search5600</b> → <b>Search management → Indexes → + Add index</b></div>
+  <table>
+    <tr><th>#</th><th>Domain</th><th>Index name</th></tr>
+    <tr><td>1</td><td>Employment law &amp; compliance</td><td><span class="ic">hriq-employment-law</span></td></tr>
+    <tr><td>2</td><td>HR policies</td><td><span class="ic">hriq-hr-policies</span></td></tr>
+    <tr><td>3</td><td>Job architecture</td><td><span class="ic">hriq-job-architecture</span></td></tr>
+    <tr><td>4</td><td>Learning &amp; development</td><td><span class="ic">hriq-learning-development</span></td></tr>
+    <tr><td>5</td><td>Onboarding &amp; offboarding</td><td><span class="ic">hriq-onboarding-offboarding</span></td></tr>
+  </table>
+  <h3>Each index has the same fields</h3>
+  <table>
+    <tr><th>Field</th><th>Type / setting</th></tr>
+    <tr><td><span class="ic">id</span></td><td>String · key</td></tr>
+    <tr><td><span class="ic">title</span>, <span class="ic">content</span></td><td>Searchable (BM25)</td></tr>
+    <tr><td><span class="ic">content_vector</span></td><td>Collection(Single) · 3072 dims · HNSW profile</td></tr>
+    <tr><td><span class="ic">jurisdiction</span>, <span class="ic">content_type</span>, <span class="ic">grade</span>, <span class="ic">job_family</span>, <span class="ic">revision</span></td><td>Filterable + facetable (this is the "labels" that make answers correct per country)</td></tr>
+  </table>
+  <h3>Vector config to set on the index</h3>
+  <div class="path"><b>HNSW</b>: m=<b>4</b>, efConstruction=<b>400</b>, efSearch=<b>500</b>, metric=<b>cosine</b> · <b>Vectorizer</b>: Azure OpenAI → deployment <b>text-embedding-3-large-2</b> · <b>Semantic config</b>: title=<span class="ic">title</span>, content=<span class="ic">content</span></div>
+  <div class="note">Prefer code? The whole schema is in the repo at
+  <span class="ic">services/index/schemas/_common.py</span> (Python) — run <span class="ic">python -m hriq_foundry_iq.scripts.bootstrap_indexes</span> to create all 5 at once.</div>
+  <div class="done">✅ Done when: 5 <span class="ic">hriq-*</span> indexes appear under <b>Indexes</b>, each with a <span class="ic">content_vector</span> field and a semantic configuration.</div>
+</section>
+
+<!-- STEP 3 -->
+<section id="s3">
+  <h2><span class="stepnum">3</span> Chunk &amp; upload the HR documents</h2>
+  <div class="goal">Cut each source document into citable pieces and load them (with their embeddings) into the matching index.</div>
+  <h3>Chunking rules</h3>
+  <div class="path">Split on markdown <b>##</b> headings first (keeps ideas together) → then a sliding window of
+  <b>1,100 chars</b> with <b>150 char</b> overlap → each chunk <b>inherits</b> its parent's jurisdiction / content_type / grade / job_family / revision.</div>
+  <div class="note">Easiest path: run the repo's uploader, which chunks + embeds + uploads to all 5 indexes:
+  <span class="ic">python -m hriq_foundry_iq.scripts.ingest_all</span>. Portal upload is possible via "Import data" but the CLI is far simpler for vectors.</div>
+  <div class="done">✅ Done when: each index's <b>Document count</b> is &gt; 0 (e.g. employment-law ≈ 51, learning-development ≈ 142).</div>
+</section>
+
+<!-- STEP 4 -->
+<section id="s4">
+  <h2><span class="stepnum">4</span> Create the 5 Knowledge Sources</h2>
+  <div class="goal">A <b>Knowledge Source</b> wraps one index and tells Foundry IQ which fields to return for citations.
+  Five indexes → five sources.</div>
+  <div class="path"><b>Azure portal</b> → Search <b>foundry-iq-search5600</b> → <b>Agentic retrieval → Knowledge sources → + Add knowledge source → Search index</b></div>
+  <table>
+    <tr><th>#</th><th>Knowledge source name</th><th>Points at index</th></tr>
+    <tr><td>1</td><td><span class="ic">hriq-employment-law-source</span></td><td><span class="ic">hriq-employment-law</span></td></tr>
+    <tr><td>2</td><td><span class="ic">hriq-hr-policies-source</span></td><td><span class="ic">hriq-hr-policies</span></td></tr>
+    <tr><td>3</td><td><span class="ic">hriq-job-architecture-source</span></td><td><span class="ic">hriq-job-architecture</span></td></tr>
+    <tr><td>4</td><td><span class="ic">hriq-learning-development-source</span></td><td><span class="ic">hriq-learning-development</span></td></tr>
+    <tr><td>5</td><td><span class="ic">hriq-onboarding-offboarding-source</span></td><td><span class="ic">hriq-onboarding-offboarding</span></td></tr>
+  </table>
+  <div class="path">Source-data fields to expose for citations: <b>id, title, revision, jurisdiction, content_type, source_system</b> · Semantic config: the one from Step 2.</div>
+  <div class="done">✅ Done when: 5 <span class="ic">*-source</span> entries show under <b>Knowledge sources</b>, each mapped to its index.</div>
+</section>
+
+<!-- STEP 5 -->
+<section id="s5">
+  <h2><span class="stepnum">5</span> Create the 3 Knowledge Bases (one per audience)</h2>
+  <div class="goal">A <b>Knowledge Base</b> groups sources for one audience and attaches the chat model. Same data, three lenses.</div>
+  <div class="path"><b>Azure portal</b> → Search <b>foundry-iq-search5600</b> → <b>Agentic retrieval → Knowledge bases → + Add knowledge base</b> · Chat completion model = <b>gpt-5</b></div>
+  <table>
+    <tr><th>Knowledge Base</th><th>Audience</th><th>Composes these Knowledge Sources</th></tr>
+    <tr><td><span class="ic">hriq-hrbp-kb</span></td><td>HR Business Partner</td><td>employment-law-source · hr-policies-source · job-architecture-source</td></tr>
+    <tr><td><span class="ic">hriq-manager-kb</span></td><td>Line Manager</td><td>job-architecture-source · learning-development-source · onboarding-offboarding-source</td></tr>
+    <tr><td><span class="ic">hriq-hrops-kb</span></td><td>HR Operations</td><td>all 5 sources</td></tr>
+  </table>
+  <div class="done">✅ Done when: 3 <span class="ic">hriq-*-kb</span> entries appear under <b>Knowledge bases</b>, each listing its sources + a gpt-5 model.</div>
+</section>
+
+<!-- STEP 6 -->
+<section id="s6">
+  <h2><span class="stepnum">6</span> Create the MCP connections (one per KB)</h2>
+  <div class="goal">Each KB exposes an <b>MCP endpoint</b>. The agent reaches it through a project <b>RemoteTool connection</b>
+  using the project's <b>managed identity</b> (keyless). One connection per KB.</div>
+  <div class="path"><b>Foundry portal</b> → project → <b>Management center → Connected resources → + New connection → Custom / RemoteTool</b> (or create via ARM/CLI below).</div>
+  <table>
+    <tr><th>Connection name</th><th>Target (the KB's MCP URL)</th></tr>
+    <tr><td><span class="ic">hriq-hrbp-kb-mcp-connection</span></td><td>https://foundry-iq-search5600.search.windows.net/knowledgebases/<b>hriq-hrbp-kb</b>/mcp?api-version=2026-05-01-preview</td></tr>
+    <tr><td><span class="ic">hriq-manager-kb-mcp-connection</span></td><td>…/knowledgebases/<b>hriq-manager-kb</b>/mcp?api-version=2026-05-01-preview</td></tr>
+    <tr><td><span class="ic">hriq-hrops-kb-mcp-connection</span></td><td>…/knowledgebases/<b>hriq-hrops-kb</b>/mcp?api-version=2026-05-01-preview</td></tr>
+  </table>
+  <div class="path">Connection properties: authType=<b>ProjectManagedIdentity</b> · category=<b>RemoteTool</b> · audience=<b>https://search.azure.com/</b></div>
+  <div class="note warn">⚠️ The <b>target must be the exact per-KB MCP URL including <span class="ic">?api-version=</span></b>. A generic search-root target returns HTTP 400 "missing api-version" when the agent lists tools.</div>
+  <div class="done">✅ Done when: 3 <span class="ic">*-mcp-connection</span> entries exist under <b>Connected resources</b>.</div>
+</section>
+
+<!-- STEP 7 -->
+<section id="s7">
+  <h2><span class="stepnum">7</span> Create the 3 Foundry agents</h2>
+  <div class="goal">One agent per KB. Each is a <b>Prompt agent</b> whose single tool is the KB's <b>MCP</b> connection
+  (tool name <span class="ic">knowledge_base_retrieve</span>), running on <b>model-router</b>.</div>
+  <div class="path"><b>Foundry portal</b> → project → <b>Build → Agents → + New agent</b></div>
+  <table>
+    <tr><th>Agent name</th><th>Model</th><th>Tool → connection</th></tr>
+    <tr><td><span class="ic">hriq-hrbp-kb-agent</span></td><td>model-router</td><td>MCP → <span class="ic">hriq-hrbp-kb-mcp-connection</span></td></tr>
+    <tr><td><span class="ic">hriq-manager-kb-agent</span></td><td>model-router</td><td>MCP → <span class="ic">hriq-manager-kb-mcp-connection</span></td></tr>
+    <tr><td><span class="ic">hriq-hrops-kb-agent</span></td><td>model-router</td><td>MCP → <span class="ic">hriq-hrops-kb-mcp-connection</span></td></tr>
+  </table>
+  <h3>Instructions (paste into each agent — this is the "cite or say I don't know" guardrail)</h3>
+  <div class="codewrap"><button class="copy">Copy</button><pre>You are HRIQ, Meridian Group's HR assistant. Always call the knowledge_base_retrieve
+tool and answer only from what it returns. Cite the exact source for every claim with
+a numbered citation, and state which jurisdiction (Germany, UK, or Global) each
+statutory or policy claim applies to. When a question spans statutory law and company
+policy, give the statutory position first, then how the global policy extends it. If
+the knowledge base does not contain the answer, reply exactly "I don't know" and
+recommend escalating to Legal or HR Operations.</pre></div>
+  <div class="note">MCP tool setting: <b>require approval = never</b>, <b>allowed tools = knowledge_base_retrieve</b>.</div>
+  <div class="done">✅ Done when: 3 <span class="ic">hriq-*-kb-agent</span> agents show <b>Running</b> under <b>Build → Agents</b>.</div>
+</section>
+
+<!-- STEP 8 -->
+<section id="s8">
+  <h2><span class="stepnum">8</span> Grant the runtime identity read access</h2>
+  <div class="goal">The <b>agent's managed identity</b> must be able to read the Search data at answer time, or the MCP call returns 401/403.</div>
+  <table>
+    <tr><th>Role</th><th>On</th><th>Assign to</th></tr>
+    <tr><td>Search Index Data Reader</td><td>Search <span class="ic">foundry-iq-search5600</span></td><td>the Foundry project / agent managed identity</td></tr>
+    <tr><td>Foundry User (or Agent Consumer)</td><td>Foundry account</td><td>same identity</td></tr>
+  </table>
+  <div class="note">The project's system-assigned managed identity is what the MCP connection (Step 6) authenticates as. Grant it <b>Search Index Data Reader</b> under the Search service's <b>Access control (IAM)</b>.</div>
+  <div class="done">✅ Done when: the identity lists <b>Search Index Data Reader</b> + <b>Foundry User</b>.</div>
+</section>
+
+<!-- STEP 9 -->
+<section id="s9">
+  <h2><span class="stepnum">9</span> Test in the Agent Playground</h2>
+  <div class="goal">Prove the whole chain end-to-end — plan → parallel hybrid retrieve → rerank → cited answer.</div>
+  <div class="path"><b>Foundry portal</b> → <b>Build → Agents →</b> open <b>hriq-hrbp-kb-agent</b> → <b>Playground / Try in playground</b></div>
+  <h3>Ask the hardest (3-source) question</h3>
+  <div class="codewrap"><button class="copy">Copy</button><pre>A Senior Analyst in Germany asks about promotion eligibility while on parental leave:
+what does job architecture say about competencies, what does German law say about
+promotion rights during leave, and what does our global policy say about development
+conversations during leave?</pre></div>
+  <h3>What "good" looks like</h3>
+  <div class="path">The answer <b>calls knowledge_base_retrieve</b>, contains <b>numbered citations</b>, states the
+  <b>jurisdiction</b> (Germany / Global), and pulls from <b>3 different sources</b>. Expand the run's tool call to see the sub-queries.</div>
+  <div class="done">✅ Done when: one cited, jurisdiction-accurate answer comes back in under ~2 minutes.</div>
+</section>
+
+<!-- STEP 10 -->
+<section id="s10">
+  <h2><span class="stepnum">10</span> (Optional) One unified agent over all 5 sources</h2>
+  <div class="goal">Prefer a single agent instead of three? Make one KB that composes <b>all 5</b> sources, then one agent on it.</div>
+  <table>
+    <tr><th>Resource</th><th>Name</th><th>Composes</th></tr>
+    <tr><td>Knowledge Base</td><td><span class="ic">hriq-kb</span></td><td>all 5 <span class="ic">*-source</span></td></tr>
+    <tr><td>MCP connection</td><td><span class="ic">hriq-kb-mcp-connection</span></td><td>…/knowledgebases/<b>hriq-kb</b>/mcp?api-version=2026-05-01-preview</td></tr>
+    <tr><td>Agent</td><td><span class="ic">hriq-kb-agent</span></td><td>model-router · MCP → hriq-kb-mcp-connection</td></tr>
+  </table>
+  <div class="note">This is the exact "ONE agent → ONE MCP tool → ONE KB → 5 sources" picture. It already exists in this project (agent <span class="ic">hriq-kb-agent</span>, KB <span class="ic">hriq-kb</span>) — repeat Steps 5–7 with these names to build it from scratch.</div>
+  <div class="done">✅ Done when: <span class="ic">hriq-kb-agent</span> answers using citations spanning any of the 5 domains.</div>
+</section>
+
+<!-- CHEAT SHEET -->
+<section id="cheat">
+  <h2>★ Names cheat sheet (copy-ready)</h2>
+  <h3>Environment</h3>
+  <table>
+    <tr><th>Thing</th><th>Value</th></tr>
+    <tr><td>Tenant</td><td><span class="ic">16b3c013-d300-468d-ac64-7eda0820b6d3</span></td></tr>
+    <tr><td>Subscription</td><td><span class="ic">4a751d0a-a8ef-44f2-b08f-05b8d87d959a</span> (MCAPS-Hybrid-REQ-138121)</td></tr>
+    <tr><td>Search service</td><td><span class="ic">foundry-iq-search5600</span> (RG rg-swarupmishra-5600)</td></tr>
+    <tr><td>SEARCH_ENDPOINT</td><td><span class="ic">https://foundry-iq-search5600.search.windows.net</span></td></tr>
+    <tr><td>Foundry account</td><td><span class="ic">swarupmishra-learnv1-resource</span> (RG SwarupAI, eastus2)</td></tr>
+    <tr><td>Foundry project</td><td><span class="ic">agentfond-create-a-develop-1</span></td></tr>
+    <tr><td>PROJECT_ENDPOINT</td><td><span class="ic">https://swarupmishra-learnv1-resource.services.ai.azure.com/api/projects/agentfond-create-a-develop-1</span></td></tr>
+    <tr><td>Chat / agent model</td><td><span class="ic">model-router</span> · KB model <span class="ic">gpt-5</span></td></tr>
+    <tr><td>Embedding deployment</td><td><span class="ic">text-embedding-3-large-2</span> (3072-dim)</td></tr>
+    <tr><td>MCP api-version</td><td><span class="ic">2026-05-01-preview</span></td></tr>
+  </table>
+  <h3>The 5 → 5 → 3 → agents map</h3>
+  <table>
+    <tr><th>Domain</th><th>Index</th><th>Knowledge Source</th><th>In KBs</th></tr>
+    <tr><td>employment_law</td><td>hriq-employment-law</td><td>hriq-employment-law-source</td><td>hrbp, hrops</td></tr>
+    <tr><td>hr_policies</td><td>hriq-hr-policies</td><td>hriq-hr-policies-source</td><td>hrbp, hrops</td></tr>
+    <tr><td>job_architecture</td><td>hriq-job-architecture</td><td>hriq-job-architecture-source</td><td>hrbp, manager, hrops</td></tr>
+    <tr><td>learning_development</td><td>hriq-learning-development</td><td>hriq-learning-development-source</td><td>manager, hrops</td></tr>
+    <tr><td>onboarding_offboarding</td><td>hriq-onboarding-offboarding</td><td>hriq-onboarding-offboarding-source</td><td>manager, hrops</td></tr>
+  </table>
+  <table>
+    <tr><th>Knowledge Base</th><th>MCP connection</th><th>Agent</th></tr>
+    <tr><td>hriq-hrbp-kb</td><td>hriq-hrbp-kb-mcp-connection</td><td>hriq-hrbp-kb-agent</td></tr>
+    <tr><td>hriq-manager-kb</td><td>hriq-manager-kb-mcp-connection</td><td>hriq-manager-kb-agent</td></tr>
+    <tr><td>hriq-hrops-kb</td><td>hriq-hrops-kb-mcp-connection</td><td>hriq-hrops-kb-agent</td></tr>
+    <tr><td>hriq-kb (unified, optional)</td><td>hriq-kb-mcp-connection</td><td>hriq-kb-agent</td></tr>
+  </table>
+</section>
+
+<footer>
+  Built for Meridian Group · Challenge 3 (Foundry IQ). Portal names verified against the live
+  <span class="ic">foundry-iq-search5600</span> / <span class="ic">agentfond-create-a-develop-1</span> deployment.
+</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark',securityLevel:'loose',flowchart:{curve:'basis'}});
+  // copy buttons
+  document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{
+    const pre=b.parentElement.querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText).then(()=>{const t=b.textContent;b.textContent='Copied ✓';setTimeout(()=>b.textContent=t,1200);});
+  }));
+</script>
+</body>
+</html>
