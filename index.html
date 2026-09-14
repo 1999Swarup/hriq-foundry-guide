@@ -133,27 +133,29 @@ flowchart LR
 flowchart TB
     A["Step 0<br/>Prereqs + sign in + RBAC"] --> B["Step 1<br/>Deploy 2 models<br/>chat + embedding"]
     B --> C["Step 2<br/>Create 5 indexes<br/>HNSW + semantic"]
-    C --> D["Step 3<br/>Upload chunked docs<br/>into the 5 indexes"]
+    C --> D["Step 3<br/>Ingest + chunk from sources<br/>Blob · SharePoint · SQL"]
     D --> E["Step 4<br/>Create 5 Knowledge Sources"]
     E --> F["Step 5<br/>Create 3 Knowledge Bases"]
     F --> G["Step 6<br/>Create 1 Foundry agent<br/>hriq-hr-agent"]
     G --> H["Step 7<br/>Attach the 3 KBs<br/>(Knowledge panel)"]
     H --> I["Step 8<br/>Grant runtime RBAC"]
-    I --> J["Step 9<br/>Test in the Playground"]
+    I --> SEC["Step 8b<br/>Country access control<br/>security trimming"]
+    SEC --> J["Step 9<br/>Test in the Playground"]
     J --> K["Step 10 (optional)<br/>Single-KB variant<br/>hriq-kb over all 5"]
     classDef s fill:#141d3b,stroke:#5b8cff,color:#eaf0ff;
-    class A,B,C,D,E,F,G,H,I,J,K s;
+    class A,B,C,D,E,F,G,H,I,SEC,J,K s;
   </div>
   <div class="toc">
     <a href="#s0"><b>0</b>Prerequisites &amp; RBAC</a>
     <a href="#s1"><b>1</b>Deploy 2 models</a>
     <a href="#s2"><b>2</b>Create 5 indexes</a>
-    <a href="#s3"><b>3</b>Upload chunked data</a>
+    <a href="#s3"><b>3</b>Ingest &amp; chunk (sources)</a>
     <a href="#s4"><b>4</b>5 Knowledge Sources</a>
     <a href="#s5"><b>5</b>3 Knowledge Bases</a>
     <a href="#s6"><b>6</b>1 Foundry agent</a>
     <a href="#s7"><b>7</b>Attach 3 KBs to it</a>
     <a href="#s8"><b>8</b>Runtime RBAC</a>
+    <a href="#access"><b>8b</b>Country access control</a>
     <a href="#s9"><b>9</b>Test in Playground</a>
     <a href="#s10"><b>10</b>Single-KB variant (optional)</a>
     <a href="#cheat"><b>★</b>Names cheat sheet</a>
@@ -227,14 +229,52 @@ az account set --subscription 4a751d0a-a8ef-44f2-b08f-05b8d87d959a</pre></div>
 
 <!-- STEP 3 -->
 <section id="s3">
-  <h2><span class="stepnum">3</span> Chunk &amp; upload the HR documents</h2>
-  <div class="goal">Cut each source document into citable pieces and load them (with their embeddings) into the matching index.</div>
-  <h3>Chunking rules</h3>
+  <h2><span class="stepnum">3</span> Ingest &amp; chunk the HR documents (from real source systems)</h2>
+  <div class="goal">Cut each source document into citable pieces and load them — with embeddings + metadata — into the matching index. There are two ways to do this; use whichever fits the source.</div>
+  <table>
+    <tr><th>Model</th><th>How it works</th><th>Best for</th></tr>
+    <tr><td><b>A · Push (manual / SDK)</b></td><td>You read the file, chunk it in code, embed each chunk, and <span class="ic">uploadDocuments</span> into the index.</td><td>Local files, PDFs, ad-hoc loads, the in-app "Load your own documents" button.</td></tr>
+    <tr><td><b>B · Pull (indexer + skillset)</b></td><td>Azure AI Search connects to a <b>data source</b> (Blob / SharePoint / SQL), an <b>indexer</b> crawls it, and a <b>skillset</b> chunks + embeds automatically.</td><td>SharePoint libraries, Blob containers, SQL tables that change over time.</td></tr>
+  </table>
+
+  <h3>Chunking rule (identical in both models)</h3>
   <div class="path">Split on markdown <b>##</b> headings first (keeps ideas together) → then a sliding window of
   <b>1,100 chars</b> with <b>150 char</b> overlap → each chunk <b>inherits</b> its parent's jurisdiction / content_type / grade / job_family / revision.</div>
-  <div class="note">Easiest path: run the repo's uploader, which chunks + embeds + uploads to all 5 indexes:
-  <span class="ic">python -m hriq_foundry_iq.scripts.ingest_all</span>. Portal upload is possible via "Import data" but the CLI is far simpler for vectors.</div>
-  <div class="done">✅ Done when: each index's <b>Document count</b> is &gt; 0 (e.g. employment-law ≈ 51, learning-development ≈ 142).</div>
+
+  <h3>A · Push model — chunk + embed + upload yourself</h3>
+  <div class="note">Run the repo uploader (chunks + embeds + upserts to all 5 indexes):
+  <span class="ic">python -m hriq_foundry_iq.scripts.ingest_all</span>. Or use the web app's <b>Data → Load your own documents</b> panel, or the standalone <span class="ic">load_documents.py</span> loader. All three do the same three steps: <b>chunk → embed (text-embedding-3-large-2) → uploadDocuments</b>.</div>
+
+  <h3>B · Pull model — Blob &amp; SharePoint data sources (valid URLs)</h3>
+  <div class="goal">One-time wiring: a <b>data source</b> (where the files live) → a <b>skillset</b> (Split + embedding) → an <b>indexer</b> (schedule) → <b>index projections</b> that write one search document per chunk. This is exactly what the portal's <b>Import and vectorize data</b> wizard builds for you.</div>
+  <table>
+    <tr><th>Source</th><th>Data-source type · valid URL / connection</th></tr>
+    <tr><td><b>Azure Blob</b></td><td>type <span class="ic">azureblob</span> · container URL <span class="ic">https://hriqstorage5600.blob.core.windows.net/meridian-hr-blobs</span> · auth = <b>managed identity</b> (ResourceId of the search service granted <b>Storage Blob Data Reader</b>)</td></tr>
+    <tr><td><b>SharePoint Online</b></td><td>type <span class="ic">sharepoint</span> (preview) · connection <span class="ic">SharePointOnlineEndpoint=https://&lt;tenant&gt;.sharepoint.com/sites/HR;ApplicationId=&lt;appId&gt;</span> · Graph scope <b>Sites.Selected</b> on just the HR site</td></tr>
+    <tr><td><b>Azure SQL</b></td><td>type <span class="ic">azuresql</span> · server <span class="ic">hriq-sql-server.database.windows.net</span> · db <span class="ic">HRIQMeridianDB</span> (high-watermark change tracking for incremental pulls)</td></tr>
+  </table>
+  <h3>The skillset that does the chunking + embedding</h3>
+  <div class="codewrap"><button class="copy">Copy</button><pre>"skills": [
+  { "@odata.type": "#Microsoft.Skills.Text.SplitSkill",
+    "textSplitMode": "pages", "maximumPageLength": 1100, "pageOverlapLength": 150,
+    "inputs": [{ "name": "text", "source": "/document/content" }],
+    "outputs": [{ "name": "textItems", "targetName": "chunks" }] },
+  { "@odata.type": "#Microsoft.Skills.Text.AzureOpenAIEmbeddingSkill",
+    "resourceUri": "https://swarupmishra-learnv1-resource.services.ai.azure.com",
+    "deploymentId": "text-embedding-3-large-2", "modelName": "text-embedding-3-large",
+    "inputs": [{ "name": "text", "source": "/document/chunks/*" }],
+    "outputs": [{ "name": "embedding", "targetName": "content_vector" }] }
+],
+"indexProjections": {                       // one search doc per chunk
+  "selectors": [{ "targetIndexName": "hriq-hr-policies",
+    "parentKeyFieldName": "parent_id", "sourceContext": "/document/chunks/*",
+    "mappings": [
+      { "name": "content", "source": "/document/chunks/*" },
+      { "name": "content_vector", "source": "/document/chunks/*/content_vector" },
+      { "name": "jurisdiction", "source": "/document/jurisdiction" },
+      { "name": "revision", "source": "/document/revision" } ] }] }</pre></div>
+  <div class="note warn">⚠️ Blob <span class="ic">hriqstorage5600</span> is <b>publicNetworkAccess=Disabled</b> (AAD-only, private). The indexer reaches it over a <b>shared private link</b> / trusted-service exception with the search service's <b>managed identity</b> — not a laptop. Grant the search MI <b>Storage Blob Data Reader</b>.</div>
+  <div class="done">✅ Done when: each index's <b>Document count</b> is &gt; 0 (e.g. employment-law ≈ 51, learning-development ≈ 142) and the indexer's last run shows <b>Success</b>.</div>
 </section>
 
 <!-- STEP 4 -->
@@ -333,7 +373,34 @@ answer, reply exactly "I don't know" and recommend escalating to Legal or HR Ope
   <div class="done">✅ Done when: the identity lists <b>Search Index Data Reader</b> + <b>Foundry User</b>.</div>
 </section>
 
-<!-- STEP 9 -->
+<!-- COUNTRY ACCESS CONTROL -->
+<section id="access">
+  <h2><span class="stepnum">8b</span> Country-aware access control (a Germany user must not see US policies)</h2>
+  <div class="goal">The RBAC in Steps 0/8 controls who can <i>build/run</i> the system. This step controls what each <b>end user sees inside an answer</b>: a German HRBP asking a question must never get a US-only policy in the retrieved sources — even though both live in the same index. There are three ways to enforce it; use A (native, tamper-proof) for production.</div>
+
+  <h3>A · Document-level security trimming (recommended)</h3>
+  <div class="goal">Azure AI Search can filter results by the <b>caller's own identity</b>, enforced by the service — the app can't accidentally leak. You tag each document with the Entra <b>group(s)</b> allowed to see it, then pass the user's token at query time.</div>
+  <table>
+    <tr><th>Do this</th><th>Detail</th></tr>
+    <tr><td>Add ACL fields to each index</td><td>a field <span class="ic">groupIds</span> (Collection(String)) with <span class="ic">permissionFilter: groupIds</span> — and set the index's <span class="ic">permissionFilterOption: enabled</span></td></tr>
+    <tr><td>Tag every chunk at ingest</td><td>US-only policy → <span class="ic">groupIds:["HR-US"]</span>; German law → <span class="ic">["HR-DE"]</span>; company-wide → <span class="ic">["HR-Global"]</span></td></tr>
+    <tr><td>Create the Entra groups</td><td><span class="ic">HR-DE</span>, <span class="ic">HR-US</span>, <span class="ic">HR-UK</span>, <span class="ic">HR-Global</span> — a German HRBP is a member of <b>HR-DE + HR-Global</b>, never HR-US</td></tr>
+    <tr><td>Query with the user token</td><td>send header <span class="ic">x-ms-query-source-authorization: &lt;user's Entra token&gt;</span>; the service returns only docs whose <span class="ic">groupIds</span> intersect the user's groups</td></tr>
+  </table>
+  <div class="note">This is why Foundry IQ advertises <b>"permission-aware responses"</b> — the KB passes the caller's identity down to the search layer, so a Germany user's retrieval simply never contains US-only rows. No filter for the app to forget.</div>
+
+  <h3>B · Jurisdiction metadata filter (simple, app-enforced)</h3>
+  <div class="goal">Every chunk already carries a <span class="ic">jurisdiction</span> field (Germany / UK / US / Global). The app adds an OData filter based on the signed-in user's country before it retrieves:</div>
+  <div class="codewrap"><button class="copy">Copy</button><pre>// German user → sees Germany-specific + company-wide, never US/UK-only
+$filter = "jurisdiction eq 'Germany' or jurisdiction eq 'Global'"</pre></div>
+  <div class="note warn">⚠️ Trust boundary: option B is only as safe as the app that adds the filter. Good for a demo and for relevance; combine with A for a real security guarantee.</div>
+
+  <h3>C · Separate KBs / indexes per region</h3>
+  <div class="goal">Coarsest option: build region-scoped indexes (<span class="ic">hriq-*-de</span>, <span class="ic">hriq-*-us</span>) and region KBs (<span class="ic">hriq-de-kb</span>, <span class="ic">hriq-us-kb</span>), then RBAC the agents so a German HRBP can only invoke the DE agent. Simple mentally, but multiplies resources and duplicates Global docs — prefer A unless you need hard physical isolation.</div>
+
+  <div class="note"><b>Recommended design:</b> one set of 5 indexes → tag chunks with both <span class="ic">jurisdiction</span> (for relevance) <b>and</b> <span class="ic">groupIds</span> (for security) → keep the 3 audience KBs → enforce access with <b>A (security trimming)</b>. Same architecture as the rest of this guide, just two extra fields at ingest.</div>
+  <div class="done">✅ Done when: signed in as a German HRBP, the north-star answer cites German + Global sources and <b>zero</b> US-only documents — verifiable in the retrieval trace (no <span class="ic">groupIds:["HR-US"]</span> rows).</div>
+</section>
 <section id="s9">
   <h2><span class="stepnum">9</span> Test in the Agent Playground</h2>
   <div class="goal">Prove the whole chain end-to-end — plan → parallel hybrid retrieve → rerank → cited answer.</div>
