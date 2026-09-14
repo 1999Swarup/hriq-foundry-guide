@@ -73,12 +73,12 @@
   <div class="kick">Meridian Group · Challenge 3 · learn-by-doing</div>
   <h1>Build a <span class="g">Foundry IQ</span> Agent — Step by Step</h1>
   <p>Follow this flowchart to create the whole thing yourself in the Azure &amp; Microsoft Foundry portals:
-  <b>5 Knowledge Sources → 3 Knowledge Bases → agentic retrieval → a Foundry agent with the MCP tool</b>.
+  <b>5 Knowledge Sources → 3 Knowledge Bases → agentic retrieval → ONE Foundry agent that attaches all 3 KBs</b>.
   Every exact resource name is given. No web app needed — this is the grounding stack the app just calls.</p>
   <div class="pills">
     <span class="pill">Search: foundry-iq-search5600</span>
     <span class="pill">Project: agentfond-create-a-develop-1</span>
-    <span class="pill">5 indexes · 5 sources · 3 KBs · 4 agents</span>
+    <span class="pill">5 indexes · 5 sources · 3 KBs · 1 unified agent</span>
     <span class="pill">Keyless (Entra / managed identity)</span>
   </div>
 </header>
@@ -86,32 +86,41 @@
 <!-- TARGET ARCHITECTURE -->
 <section id="arch">
   <h2>The target architecture (what you're building)</h2>
-  <div class="goal">This is the shape from the diagram: one question → one agent → one MCP tool → a Knowledge Base
-  that fans hybrid queries across the 5 Knowledge Sources, reranks, and returns one cited answer.</div>
+  <div class="goal">This is the shape from the screenshot: one question → <b>ONE Foundry agent</b> that has <b>three Knowledge Bases</b>
+  attached under its <b>Knowledge</b> panel. The agent's router-model picks which KB tool(s) to call; each KB internally
+  runs the agentic-retrieval pipeline (plan → parallel hybrid retrieve → semantic rerank → cited synthesis) across its Knowledge Sources.</div>
   <div class="mermaid">
 flowchart LR
     U["HR user asks<br/>ONE question"] --> AG
-    subgraph FDRY["Microsoft Foundry (hosted agent)"]
-      AG["Foundry agent<br/>hriq-hrbp-kb-agent<br/>PromptAgentDefinition + MCPTool"] --> MCP["MCP tool<br/>knowledge_base_retrieve"]
+    subgraph FDRY["Microsoft Foundry — ONE hosted agent (hriq-hr-agent, model-router)"]
+      AG["Foundry agent"]
+      AG --> T1["MCP tool<br/>knowledge_base_hrbp"]
+      AG --> T2["MCP tool<br/>knowledge_base_manager"]
+      AG --> T3["MCP tool<br/>knowledge_base_hrops"]
     end
-    subgraph KB["Foundry IQ Knowledge Base (hriq-hrbp-kb)"]
-      P["1 · Plan → sub-queries"] --> R["2 · Retrieve (parallel)<br/>BM25 + HNSW vector"]
-      R --> K["3 · Rerank (semantic L2)<br/>+ keep citations"] --> S["4 · Synthesize<br/>one cited answer"]
+    subgraph KBS["3 Foundry IQ Knowledge Bases (each: plan → retrieve → rerank → synthesize)"]
+      KB1["hriq-hrbp-kb"]
+      KB2["hriq-manager-kb"]
+      KB3["hriq-hrops-kb"]
     end
-    subgraph SRC["5 Knowledge Sources (Azure AI Search)"]
+    subgraph SRC["5 Knowledge Sources (Azure AI Search · BM25 + HNSW vector + semantic)"]
       S1["hriq-employment-law"]
       S2["hriq-hr-policies"]
       S3["hriq-job-architecture"]
       S4["hriq-learning-development"]
       S5["hriq-onboarding-offboarding"]
     end
-    MCP --> P
-    R -->|hybrid queries| S1 & S2 & S3 & S4 & S5
-    S --> A["ONE cited answer<br/>jurisdiction-accurate"]
+    T1 --> KB1
+    T2 --> KB2
+    T3 --> KB3
+    KB1 -->|hybrid queries| S1 & S2 & S3
+    KB2 -->|hybrid queries| S3 & S4 & S5
+    KB3 -->|hybrid queries| S1 & S2 & S3 & S4 & S5
+    AG --> A["ONE cited answer<br/>jurisdiction-accurate"]
     classDef src fill:#c2410c,stroke:#7c2d12,color:#fff;
     classDef kb fill:#0f766e,stroke:#08403b,color:#fff;
     classDef fdry fill:#0369a1,stroke:#083344,color:#fff;
-    class S1,S2,S3,S4,S5 src; class P,R,K,S kb; class AG,MCP fdry;
+    class S1,S2,S3,S4,S5 src; class KB1,KB2,KB3 kb; class AG,T1,T2,T3 fdry;
   </div>
 </section>
 
@@ -127,11 +136,11 @@ flowchart TB
     C --> D["Step 3<br/>Upload chunked docs<br/>into the 5 indexes"]
     D --> E["Step 4<br/>Create 5 Knowledge Sources"]
     E --> F["Step 5<br/>Create 3 Knowledge Bases"]
-    F --> G["Step 6<br/>Create 3 MCP connections"]
-    G --> H["Step 7<br/>Create 3 Foundry agents"]
+    F --> G["Step 6<br/>Create 1 Foundry agent<br/>hriq-hr-agent"]
+    G --> H["Step 7<br/>Attach the 3 KBs<br/>(Knowledge panel)"]
     H --> I["Step 8<br/>Grant runtime RBAC"]
     I --> J["Step 9<br/>Test in the Playground"]
-    J --> K["Step 10 (optional)<br/>One unified agent<br/>hriq-kb over all 5"]
+    J --> K["Step 10 (optional)<br/>Single-KB variant<br/>hriq-kb over all 5"]
     classDef s fill:#141d3b,stroke:#5b8cff,color:#eaf0ff;
     class A,B,C,D,E,F,G,H,I,J,K s;
   </div>
@@ -142,11 +151,11 @@ flowchart TB
     <a href="#s3"><b>3</b>Upload chunked data</a>
     <a href="#s4"><b>4</b>5 Knowledge Sources</a>
     <a href="#s5"><b>5</b>3 Knowledge Bases</a>
-    <a href="#s6"><b>6</b>3 MCP connections</a>
-    <a href="#s7"><b>7</b>3 Foundry agents</a>
+    <a href="#s6"><b>6</b>1 Foundry agent</a>
+    <a href="#s7"><b>7</b>Attach 3 KBs to it</a>
     <a href="#s8"><b>8</b>Runtime RBAC</a>
     <a href="#s9"><b>9</b>Test in Playground</a>
-    <a href="#s10"><b>10</b>Unified agent (optional)</a>
+    <a href="#s10"><b>10</b>Single-KB variant (optional)</a>
     <a href="#cheat"><b>★</b>Names cheat sheet</a>
   </div>
 </section>
@@ -257,48 +266,58 @@ az account set --subscription 4a751d0a-a8ef-44f2-b08f-05b8d87d959a</pre></div>
     <tr><td><span class="ic">hriq-manager-kb</span></td><td>Line Manager</td><td>job-architecture-source · learning-development-source · onboarding-offboarding-source</td></tr>
     <tr><td><span class="ic">hriq-hrops-kb</span></td><td>HR Operations</td><td>all 5 sources</td></tr>
   </table>
+  <div class="note">All three KBs will be attached to the <b>same single agent</b> in Steps 6–7 — the agent's model decides which KB to query per question. (The KB chat-completion model must be a concrete model like <span class="ic">gpt-5</span>; <span class="ic">model-router</span> is only allowed on the agent.)</div>
   <div class="done">✅ Done when: 3 <span class="ic">hriq-*-kb</span> entries appear under <b>Knowledge bases</b>, each listing its sources + a gpt-5 model.</div>
 </section>
 
 <!-- STEP 6 -->
 <section id="s6">
-  <h2><span class="stepnum">6</span> Create the MCP connections (one per KB)</h2>
-  <div class="goal">Each KB exposes an <b>MCP endpoint</b>. The agent reaches it through a project <b>RemoteTool connection</b>
-  using the project's <b>managed identity</b> (keyless). One connection per KB.</div>
-  <div class="path"><b>Foundry portal</b> → project → <b>Management center → Connected resources → + New connection → Custom / RemoteTool</b> (or create via ARM/CLI below).</div>
+  <h2><span class="stepnum">6</span> Create ONE Foundry agent</h2>
+  <div class="goal">Instead of one agent per KB, you build a <b>single</b> unified agent. It runs on <b>model-router</b> (token-efficient — the router picks the cheapest capable model per turn) and will hold all three KBs.</div>
+  <div class="path"><b>Foundry portal</b> (New Foundry toggle ON) → project <b>agentfond-create-a-develop-1</b> → <b>Build → Agents → + New agent</b></div>
   <table>
-    <tr><th>Connection name</th><th>Target (the KB's MCP URL)</th></tr>
+    <tr><th>Setting</th><th>Value</th></tr>
+    <tr><td>Agent name</td><td><span class="ic">hriq-hr-agent</span></td></tr>
+    <tr><td>Model</td><td><span class="ic">model-router</span> (Global Standard deployment)</td></tr>
+    <tr><td>Knowledge (added in Step 7)</td><td><span class="ic">hriq-hrbp-kb</span> · <span class="ic">hriq-manager-kb</span> · <span class="ic">hriq-hrops-kb</span></td></tr>
+  </table>
+  <h3>Instructions (paste into the agent — the "cite or say I don't know" guardrail)</h3>
+  <div class="codewrap"><button class="copy">Copy</button><pre>You are HRIQ, Meridian Group's unified HR assistant, grounded on THREE Foundry IQ
+knowledge bases: hriq-hrbp-kb (employment law, HR policies, job architecture),
+hriq-manager-kb (job architecture, learning & development, onboarding/offboarding),
+and hriq-hrops-kb (all five domains). For every question, call the
+knowledge_base_retrieve tool on the most relevant knowledge base (or more than one
+when the question spans audiences), then answer ONLY from what the tools return.
+Cite the exact source for every claim with a numbered citation, and state which
+jurisdiction (Germany, UK, or Global) each statutory or policy claim applies to,
+always preferring the latest revision. If the knowledge bases do not contain the
+answer, reply exactly "I don't know" and recommend escalating to Legal or HR Operations.</pre></div>
+  <div class="done">✅ Done when: <span class="ic">hriq-hr-agent</span> appears under <b>Build → Agents</b> (no knowledge attached yet — that's Step 7).</div>
+</section>
+
+<!-- STEP 7 -->
+<section id="s7">
+  <h2><span class="stepnum">7</span> Attach the 3 Knowledge Bases to the agent</h2>
+  <div class="goal">This is the key change: <b>one agent, three KBs</b>. In New Foundry you attach a Knowledge Base straight from the agent's <b>Knowledge</b> panel — Foundry auto-creates the MCP tool + connection for you (no manual connection step needed).</div>
+  <div class="path"><b>Foundry portal</b> → open <b>hriq-hr-agent</b> → <b>Playground</b> → scroll to <b>Knowledge → Add → Knowledge base</b>, and add all three:</div>
+  <table>
+    <tr><th>Add this KB</th><th>Becomes MCP tool</th><th>Covers</th></tr>
+    <tr><td><span class="ic">hriq-hrbp-kb</span></td><td><span class="ic">knowledge_base_hrbp</span></td><td>employment law · HR policies · job architecture</td></tr>
+    <tr><td><span class="ic">hriq-manager-kb</span></td><td><span class="ic">knowledge_base_manager</span></td><td>job architecture · L&amp;D · onboarding/offboarding</td></tr>
+    <tr><td><span class="ic">hriq-hrops-kb</span></td><td><span class="ic">knowledge_base_hrops</span></td><td>all 5 domains</td></tr>
+  </table>
+  <div class="note">MCP tool setting on each: <b>require approval = never</b>, <b>allowed tools = knowledge_base_retrieve</b>. After adding, <b>Save</b> the agent version.</div>
+  <h3>Advanced (code / manual): the exact per-KB MCP endpoints</h3>
+  <div class="goal">If you wire it in code (<span class="ic">PromptAgentDefinition</span> with three <span class="ic">MCPTool</span>s) or create the RemoteTool connections by hand, each tool's <b>server_url</b> must be the exact per-KB MCP URL:</div>
+  <table>
+    <tr><th>Connection</th><th>Target (server_url)</th></tr>
     <tr><td><span class="ic">hriq-hrbp-kb-mcp-connection</span></td><td>https://foundry-iq-search5600.search.windows.net/knowledgebases/<b>hriq-hrbp-kb</b>/mcp?api-version=2026-05-01-preview</td></tr>
     <tr><td><span class="ic">hriq-manager-kb-mcp-connection</span></td><td>…/knowledgebases/<b>hriq-manager-kb</b>/mcp?api-version=2026-05-01-preview</td></tr>
     <tr><td><span class="ic">hriq-hrops-kb-mcp-connection</span></td><td>…/knowledgebases/<b>hriq-hrops-kb</b>/mcp?api-version=2026-05-01-preview</td></tr>
   </table>
   <div class="path">Connection properties: authType=<b>ProjectManagedIdentity</b> · category=<b>RemoteTool</b> · audience=<b>https://search.azure.com/</b></div>
-  <div class="note warn">⚠️ The <b>target must be the exact per-KB MCP URL including <span class="ic">?api-version=</span></b>. A generic search-root target returns HTTP 400 "missing api-version" when the agent lists tools.</div>
-  <div class="done">✅ Done when: 3 <span class="ic">*-mcp-connection</span> entries exist under <b>Connected resources</b>.</div>
-</section>
-
-<!-- STEP 7 -->
-<section id="s7">
-  <h2><span class="stepnum">7</span> Create the 3 Foundry agents</h2>
-  <div class="goal">One agent per KB. Each is a <b>Prompt agent</b> whose single tool is the KB's <b>MCP</b> connection
-  (tool name <span class="ic">knowledge_base_retrieve</span>), running on <b>model-router</b>.</div>
-  <div class="path"><b>Foundry portal</b> → project → <b>Build → Agents → + New agent</b></div>
-  <table>
-    <tr><th>Agent name</th><th>Model</th><th>Tool → connection</th></tr>
-    <tr><td><span class="ic">hriq-hrbp-kb-agent</span></td><td>model-router</td><td>MCP → <span class="ic">hriq-hrbp-kb-mcp-connection</span></td></tr>
-    <tr><td><span class="ic">hriq-manager-kb-agent</span></td><td>model-router</td><td>MCP → <span class="ic">hriq-manager-kb-mcp-connection</span></td></tr>
-    <tr><td><span class="ic">hriq-hrops-kb-agent</span></td><td>model-router</td><td>MCP → <span class="ic">hriq-hrops-kb-mcp-connection</span></td></tr>
-  </table>
-  <h3>Instructions (paste into each agent — this is the "cite or say I don't know" guardrail)</h3>
-  <div class="codewrap"><button class="copy">Copy</button><pre>You are HRIQ, Meridian Group's HR assistant. Always call the knowledge_base_retrieve
-tool and answer only from what it returns. Cite the exact source for every claim with
-a numbered citation, and state which jurisdiction (Germany, UK, or Global) each
-statutory or policy claim applies to. When a question spans statutory law and company
-policy, give the statutory position first, then how the global policy extends it. If
-the knowledge base does not contain the answer, reply exactly "I don't know" and
-recommend escalating to Legal or HR Operations.</pre></div>
-  <div class="note">MCP tool setting: <b>require approval = never</b>, <b>allowed tools = knowledge_base_retrieve</b>.</div>
-  <div class="done">✅ Done when: 3 <span class="ic">hriq-*-kb-agent</span> agents show <b>Running</b> under <b>Build → Agents</b>.</div>
+  <div class="note warn">⚠️ The <b>target must be the exact per-KB MCP URL including <span class="ic">?api-version=</span></b>. A generic search-root target returns HTTP 400 "missing api-version" when the agent lists tools. Give each tool a <b>distinct server_label</b> (e.g. knowledge_base_hrbp / _manager / _hrops) — labels must be unique within one agent.</div>
+  <div class="done">✅ Done when: <span class="ic">hriq-hr-agent</span> lists all <b>3 knowledge bases</b> under Knowledge, and a test question fires one or more <span class="ic">knowledge_base_*</span> tools with citations.</div>
 </section>
 
 <!-- STEP 8 -->
@@ -318,29 +337,29 @@ recommend escalating to Legal or HR Operations.</pre></div>
 <section id="s9">
   <h2><span class="stepnum">9</span> Test in the Agent Playground</h2>
   <div class="goal">Prove the whole chain end-to-end — plan → parallel hybrid retrieve → rerank → cited answer.</div>
-  <div class="path"><b>Foundry portal</b> → <b>Build → Agents →</b> open <b>hriq-hrbp-kb-agent</b> → <b>Playground / Try in playground</b></div>
+  <div class="path"><b>Foundry portal</b> → <b>Build → Agents →</b> open <b>hriq-hr-agent</b> → <b>Playground / Try in playground</b></div>
   <h3>Ask the hardest (3-source) question</h3>
   <div class="codewrap"><button class="copy">Copy</button><pre>A Senior Analyst in Germany asks about promotion eligibility while on parental leave:
 what does job architecture say about competencies, what does German law say about
 promotion rights during leave, and what does our global policy say about development
 conversations during leave?</pre></div>
   <h3>What "good" looks like</h3>
-  <div class="path">The answer <b>calls knowledge_base_retrieve</b>, contains <b>numbered citations</b>, states the
-  <b>jurisdiction</b> (Germany / Global), and pulls from <b>3 different sources</b>. Expand the run's tool call to see the sub-queries.</div>
+  <div class="path">The answer <b>calls a knowledge_base_* tool</b>, contains <b>numbered citations</b>, states the
+  <b>jurisdiction</b> (Germany / Global), and pulls from <b>more than one KB / source</b>. Expand the run's tool call to see the sub-queries.</div>
   <div class="done">✅ Done when: one cited, jurisdiction-accurate answer comes back in under ~2 minutes.</div>
 </section>
 
 <!-- STEP 10 -->
 <section id="s10">
-  <h2><span class="stepnum">10</span> (Optional) One unified agent over all 5 sources</h2>
-  <div class="goal">Prefer a single agent instead of three? Make one KB that composes <b>all 5</b> sources, then one agent on it.</div>
+  <h2><span class="stepnum">10</span> (Optional) Single-KB variant — one KB over all 5 sources</h2>
+  <div class="goal">Want the simplest possible shape instead of 3 audience KBs? Make <b>one</b> KB that composes <b>all 5</b> sources, and attach just that one KB to an agent. No audience separation, but one tool covers everything.</div>
   <table>
     <tr><th>Resource</th><th>Name</th><th>Composes</th></tr>
     <tr><td>Knowledge Base</td><td><span class="ic">hriq-kb</span></td><td>all 5 <span class="ic">*-source</span></td></tr>
     <tr><td>MCP connection</td><td><span class="ic">hriq-kb-mcp-connection</span></td><td>…/knowledgebases/<b>hriq-kb</b>/mcp?api-version=2026-05-01-preview</td></tr>
-    <tr><td>Agent</td><td><span class="ic">hriq-kb-agent</span></td><td>model-router · MCP → hriq-kb-mcp-connection</td></tr>
+    <tr><td>Agent</td><td><span class="ic">hriq-kb-agent</span></td><td>model-router · Knowledge → hriq-kb</td></tr>
   </table>
-  <div class="note">This is the exact "ONE agent → ONE MCP tool → ONE KB → 5 sources" picture. It already exists in this project (agent <span class="ic">hriq-kb-agent</span>, KB <span class="ic">hriq-kb</span>) — repeat Steps 5–7 with these names to build it from scratch.</div>
+  <div class="note">Both shapes already exist live in this project: the <b>3-KBs-in-one-agent</b> build is <span class="ic">hriq-hr-agent</span> (Steps 5–7); the <b>single-KB</b> variant is <span class="ic">hriq-kb-agent</span> + <span class="ic">hriq-kb</span>. Per-audience single-KB agents (<span class="ic">hriq-hrbp-kb-agent</span> etc.) also exist if you want one agent per audience instead.</div>
   <div class="done">✅ Done when: <span class="ic">hriq-kb-agent</span> answers using citations spanning any of the 5 domains.</div>
 </section>
 
@@ -370,12 +389,17 @@ conversations during leave?</pre></div>
     <tr><td>learning_development</td><td>hriq-learning-development</td><td>hriq-learning-development-source</td><td>manager, hrops</td></tr>
     <tr><td>onboarding_offboarding</td><td>hriq-onboarding-offboarding</td><td>hriq-onboarding-offboarding-source</td><td>manager, hrops</td></tr>
   </table>
+  <h3>The 3 KBs → 1 agent map</h3>
   <table>
-    <tr><th>Knowledge Base</th><th>MCP connection</th><th>Agent</th></tr>
-    <tr><td>hriq-hrbp-kb</td><td>hriq-hrbp-kb-mcp-connection</td><td>hriq-hrbp-kb-agent</td></tr>
-    <tr><td>hriq-manager-kb</td><td>hriq-manager-kb-mcp-connection</td><td>hriq-manager-kb-agent</td></tr>
-    <tr><td>hriq-hrops-kb</td><td>hriq-hrops-kb-mcp-connection</td><td>hriq-hrops-kb-agent</td></tr>
-    <tr><td>hriq-kb (unified, optional)</td><td>hriq-kb-mcp-connection</td><td>hriq-kb-agent</td></tr>
+    <tr><th>Knowledge Base</th><th>MCP tool label (on the one agent)</th><th>Attach to agent</th></tr>
+    <tr><td>hriq-hrbp-kb</td><td>knowledge_base_hrbp</td><td rowspan="3"><b>hriq-hr-agent</b><br/>(model-router,<br/>all 3 KBs attached)</td></tr>
+    <tr><td>hriq-manager-kb</td><td>knowledge_base_manager</td></tr>
+    <tr><td>hriq-hrops-kb</td><td>knowledge_base_hrops</td></tr>
+  </table>
+  <table>
+    <tr><th>Optional variant</th><th>KB</th><th>Agent</th></tr>
+    <tr><td>Single KB, all 5 sources</td><td>hriq-kb</td><td>hriq-kb-agent</td></tr>
+    <tr><td>One agent per audience</td><td>hriq-hrbp-kb / -manager-kb / -hrops-kb</td><td>hriq-hrbp-kb-agent / -manager-kb-agent / -hrops-kb-agent</td></tr>
   </table>
 </section>
 
