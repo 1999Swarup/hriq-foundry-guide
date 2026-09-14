@@ -245,6 +245,49 @@ az account set --subscription 4a751d0a-a8ef-44f2-b08f-05b8d87d959a</pre></div>
   <div class="note">Run the repo uploader (chunks + embeds + upserts to all 5 indexes):
   <span class="ic">python -m hriq_foundry_iq.scripts.ingest_all</span>. Or use the web app's <b>Data → Load your own documents</b> panel, or the standalone <span class="ic">load_documents.py</span> loader. All three do the same three steps: <b>chunk → embed (text-embedding-3-large-2) → uploadDocuments</b>.</div>
 
+  <div class="note warn" style="border-color:#c2410c">
+  <b>Worked example — ingest the 5 employment-law files by hand (with RBAC).</b>
+  Folder: <span class="ic">05-employment-law</span> → index <span class="ic">hriq-employment-law</span>. Do these exactly once per file.
+  <ol style="margin:8px 0 0 18px;line-height:1.7">
+    <li><b>Extract text</b> from the PDF (any PDF-to-text; or the app's PdfPig extractor).</li>
+    <li><b>Chunk:</b> split on <span class="ic">## </span> headings, then a 1,100-char window advancing by <b>950</b> (= 150 overlap). Give each chunk id <span class="ic">&lt;stem&gt;__&lt;n&gt;</span>, e.g. <span class="ic">LAW-DE-BEEG-PARENTAL-2025__0</span>.</li>
+    <li><b>Embed</b> each chunk (input <span class="ic">"&lt;title&gt;\n\n&lt;chunk&gt;"</span>) → <span class="ic">content_vector</span> (3072 floats).</li>
+    <li><b>Tag</b> each chunk with the file's <span class="ic">jurisdiction</span> + <span class="ic">groupIds</span> from the table below.</li>
+    <li><b>Upload</b> (see the REST call further down; <span class="ic">mergeOrUpload</span> is idempotent).</li>
+  </ol>
+  <table style="margin-top:10px">
+    <tr><th>File</th><th>jurisdiction</th><th>groupIds (who may see it)</th></tr>
+    <tr><td><span class="ic">LAW-DE-BEEG-PARENTAL-2025.pdf</span></td><td>Germany</td><td>["HR-DE"]</td></tr>
+    <tr><td><span class="ic">LAW-DE-PROMO-PARENTAL-2025.pdf</span></td><td>Germany</td><td>["HR-DE"]</td></tr>
+    <tr><td><span class="ic">LAW-GDPR-HR-DATA-2025.pdf</span></td><td>EU</td><td>["HR-EU","HR-Global"]</td></tr>
+    <tr><td><span class="ic">LAW-UK-MGR-EMPLOYMENT-2025.pdf</span></td><td>United Kingdom</td><td>["HR-UK"]</td></tr>
+    <tr><td><span class="ic">LAW-UK-SPL-2025.pdf</span></td><td>United Kingdom</td><td>["HR-UK"]</td></tr>
+  </table>
+  <div style="margin-top:8px">One finished chunk-document looks like this (upload one per chunk):</div>
+  <div class="codewrap"><button class="copy">Copy</button><pre>{
+  "@search.action": "mergeOrUpload",
+  "id": "LAW-DE-BEEG-PARENTAL-2025__0",
+  "parent_id": "LAW-DE-BEEG-PARENTAL-2025",
+  "title": "LAW DE BEEG PARENTAL 2025",
+  "revision": "2025",
+  "content": "…first ~1100 chars of the German parental-leave statute…",
+  "content_vector": [0.0123, -0.0456, …3072 floats… ],
+  "jurisdiction": "Germany",
+  "content_type": "law",
+  "source_system": "manual",
+  "chunk_index": 0,
+  "groupIds": ["HR-DE"]
+}</pre></div>
+  <div style="margin-top:8px"><b>Upload</b> all chunks in one REST call (needs <b>Search Index Data Contributor</b> on your search service):</div>
+  <div class="codewrap"><button class="copy">Copy</button><pre># token:  az account get-access-token --scope https://search.azure.com/.default --query accessToken -o tsv
+POST https://&lt;your-search&gt;.search.windows.net/indexes/hriq-employment-law/docs/index?api-version=2024-07-01
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "value": [ { …chunk-doc 1… }, { …chunk-doc 2… }, … ] }</pre></div>
+  <div style="margin-top:6px">Prefer to skip the hand-work? The app's <b>Data → Load your own documents</b> button does steps 1–3 + upload for you; add the two RBAC tags in code as shown here.</div>
+  </div>
+
   <h3>B · Pull model — Blob &amp; SharePoint data sources (valid URLs)</h3>
   <div class="goal">One-time wiring: a <b>data source</b> (where the files live) → a <b>skillset</b> (Split + embedding) → an <b>indexer</b> (schedule) → <b>index projections</b> that write one search document per chunk. This is exactly what the portal's <b>Import and vectorize data</b> wizard builds for you.</div>
   <table>
@@ -388,6 +431,26 @@ answer, reply exactly "I don't know" and recommend escalating to Legal or HR Ope
     <tr><td>Query with the user token</td><td>send header <span class="ic">x-ms-query-source-authorization: &lt;user's Entra token&gt;</span>; the service returns only docs whose <span class="ic">groupIds</span> intersect the user's groups</td></tr>
   </table>
   <div class="note">This is why Foundry IQ advertises <b>"permission-aware responses"</b> — the KB passes the caller's identity down to the search layer, so a Germany user's retrieval simply never contains US-only rows. No filter for the app to forget.</div>
+
+  <div class="note warn" style="border-color:#0f766e">
+  <b>Worked example — prove it in Search Explorer (portal).</b> After you've uploaded the 5 employment-law docs tagged as in Step 3, open
+  <b>Azure portal → your search service → Indexes → hriq-employment-law → Search explorer</b> and switch the view to <b>JSON</b>. Paste each query and Search → run:
+  <div style="margin-top:8px"><b>1) As a German HR user</b> (member of HR-DE, HR-EU, HR-Global):</div>
+  <div class="codewrap"><button class="copy">Copy</button><pre>{
+  "search": "*",
+  "filter": "groupIds/any(g: search.in(g, 'HR-DE,HR-EU,HR-Global'))",
+  "select": "parent_id,jurisdiction,groupIds"
+}</pre></div>
+  <div>→ returns <b>LAW-DE-BEEG-PARENTAL</b>, <b>LAW-DE-PROMO-PARENTAL</b>, <b>LAW-GDPR-HR-DATA</b>. The two <b>UK</b> laws are <b>absent</b>.</div>
+  <div style="margin-top:8px"><b>2) As a UK HR user</b> (member of HR-UK, HR-Global) — same query, different groups:</div>
+  <div class="codewrap"><button class="copy">Copy</button><pre>{
+  "search": "*",
+  "filter": "groupIds/any(g: search.in(g, 'HR-UK,HR-Global'))",
+  "select": "parent_id,jurisdiction,groupIds"
+}</pre></div>
+  <div>→ returns the <b>UK</b> laws + GDPR; the <b>Germany-only</b> laws are absent. <b>That contrast is the RBAC proof</b> you can screen-record: same index, same query, different group membership → different visible documents.</div>
+  <div style="margin-top:6px;color:var(--mut)">(Search Explorer runs as <i>you</i>, so it doesn't auto-apply the caller's groups — you supply the group filter to simulate each user. In production, enable native <span class="ic">permissionFilter</span> below so the service applies the caller's real groups from their token and no app-side filter is needed.)</div>
+  </div>
 
   <h3>B · Jurisdiction metadata filter (simple, app-enforced)</h3>
   <div class="goal">Every chunk already carries a <span class="ic">jurisdiction</span> field (Germany / UK / US / Global). The app adds an OData filter based on the signed-in user's country before it retrieves:</div>
