@@ -379,6 +379,38 @@ flowchart LR
     <tr><td>3</td><td>Skillset</td><td>SplitSkill (1100 / 150) → AzureOpenAIEmbeddingSkill (<span class="ic">text-embedding-3-large-2</span>) + index projections (1 doc per chunk)</td></tr>
     <tr><td>4</td><td>Indexer</td><td>data source → skillset → index <span class="ic">hriq-employment-law</span> · schedule e.g. every 1 hour</td></tr>
   </table>
+
+  <h3>Manual wire-up — the exact click-by-click procedure</h3>
+  <div class="goal">Do this once per source container. Steps 1–5 are one-time setup; step 6 is what makes it "drop-and-forget" forever after. Every step lists both the <b>portal</b> path and the <b>REST</b> equivalent, plus how to prove it worked.</div>
+  <ol style="margin:8px 0 0 18px;line-height:1.8">
+    <li><b>Grant the Search service its read permission on Blob.</b>
+      The indexer authenticates as the search service's <b>system-assigned managed identity</b>, so that identity — not you — must be able to read blobs.
+      <div class="path"><b>Portal</b> → Storage <b>hriqstorage5600</b> → <b>Access control (IAM)</b> → <b>+ Add role assignment</b> → role <b>Storage Blob Data Reader</b> → <b>Assign access to = Managed identity</b> → pick search service <b>foundry-iq-search5600</b> → <b>Review + assign</b></div>
+      <div class="path"><b>CLI</b> → <span class="ic">az role assignment create --assignee-object-id &lt;search-MI-objectId&gt; --assignee-principal-type ServicePrincipal --role "Storage Blob Data Reader" --scope /subscriptions/4a751d0a-.../resourceGroups/rg-hriq-foundry-iq/providers/Microsoft.Storage/storageAccounts/hriqstorage5600</span></div>
+      First enable the identity if needed: Search service → <b>Settings → Identity → System assigned → On → Save</b> (copy the <b>Object (principal) ID</b>). <b>Verify:</b> the role shows under the storage account's <b>Role assignments</b> tab. Allow ~5&nbsp;min for propagation.
+    </li>
+    <li><b>Create the data source</b> — tells Search <i>where</i> the files live and <i>how</i> to authenticate (managed identity, no keys).
+      Use the <b>2 · Data source</b> tab below for the REST body. The <span class="ic">ResourceId=…</span> connection string (no account key) is what triggers managed-identity auth.
+      <div class="path"><b>Portal shortcut</b> → Search service → <b>Import and vectorize data</b> also builds this object for you if you prefer a wizard.</div>
+      <b>Verify:</b> <span class="ic">GET /datasources/hr-blob-ds</span> returns 200 and the container name.
+    </li>
+    <li><b>Create the skillset</b> — the <i>transform</i>: SplitSkill chunks each doc (1100 / 150 overlap), the AzureOpenAIEmbeddingSkill vectorizes each chunk with <span class="ic">text-embedding-3-large-2</span>, and <b>index projections</b> emit <b>one search document per chunk</b> (carrying <span class="ic">jurisdiction</span> + <span class="ic">groupIds</span>). Body is in the <b>3 · Skillset + projections</b> tab.
+      <div class="note">The embedding model dimensions must match the index's <span class="ic">content_vector</span> field (3072 for text-embedding-3-large). If they differ the indexer errors at run time.</div>
+      <b>Verify:</b> <span class="ic">GET /skillsets/hr-chunk-embed-ss</span> returns 200.
+    </li>
+    <li><b>Create the indexer</b> — the <i>orchestrator</i> that binds data source → skillset → target index and carries the <b>schedule</b> (<span class="ic">"interval":"PT1H"</span> = hourly). Body is in the <b>4 · Indexer + schedule</b> tab.
+      Creating an indexer <b>runs it immediately once</b>, then it re-runs on the schedule.
+    </li>
+    <li><b>Run once &amp; confirm the first pass.</b> If you want to force a run, hit <b>Run</b> in the portal or <span class="ic">POST /indexers/hr-blob-indexer/run</span>.
+      <div class="path"><b>Portal</b> → Search service → <b>Indexers</b> → <b>hr-blob-indexer</b> → watch <b>Execution history</b> → status <b>Success</b>, <b>Docs succeeded</b> &gt; 0, <b>0 failures</b></div>
+      <b>Verify:</b> the target index <b>hriq-employment-law</b> <b>Document count</b> jumps, and a sample doc has non-empty <span class="ic">content_vector</span>, <span class="ic">jurisdiction</span>, and <span class="ic">groupIds</span>.
+    </li>
+    <li><b>Let the schedule take over — drop-and-forget.</b> Setup is done; do <i>nothing</i> further. On each hourly tick the indexer's <b>change-tracking</b> (blob <span class="ic">lastModified</span> high-water mark) picks up <b>only new or changed</b> files, chunks + embeds + tags them, and upserts them into the index. Deletes/re-tags flow the same way. To change cadence later, PATCH just the <span class="ic">schedule.interval</span>; to pause, set the indexer <span class="ic">disabled:true</span>.
+      <div class="done">✅ Steady state: an HR analyst drops <span class="ic">DE-parental-leave-2026.pdf</span> into <span class="ic">meridian-hr-blobs</span> → within the hour it is searchable, vectorized, and access-scoped — no code, no redeploy, no manual indexer touch.</div>
+    </li>
+  </ol>
+  <div class="note">To make <span class="ic">groupIds</span> auto-apply in this manual pull path, stamp the jurisdiction/groups as <b>blob metadata</b> at upload (or a companion JSON) and map it in projections, or add a small custom WebApi skill that runs the jurisdiction→group rule. The HRIQ app's <b>Load your own documents</b> loader (Pattern B) already does this derivation in code.</div>
+
   <div class="tabs"><span class="tab active" data-t="ds">2 · Data source</span><span class="tab" data-t="sk">3 · Skillset + projections</span><span class="tab" data-t="ix">4 · Indexer + schedule</span></div>
   <div class="tabpane active" data-p="ds">
   <div class="codewrap"><button class="copy">Copy</button><pre>PUT https://&lt;your-search&gt;.search.windows.net/datasources/hr-blob-ds?api-version=2024-07-01
