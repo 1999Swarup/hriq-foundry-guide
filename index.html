@@ -9,13 +9,25 @@
     --bg:#0b1020;--bg2:#0f1630;--panel:#141d3b;--panel2:#1a2650;--ink:#eaf0ff;--mut:#9fb0d8;
     --line:#26335f;--accent:#5b8cff;--accent2:#2fb3a6;--good:#37d39b;--warn:#ffcf6b;--code:#0a0f22;
     --src:#c2410c;--kb:#0f766e;--fdry:#0369a1;--net:#6d28d9;
+    --glow1:#1a2550;--glow2:#132a2b;--codeink:#d6e2ff;--codegreen:#8ff0c8;--codeblue:#bcd0ff;--h3:#cdd8ff;
+    --doneBg:#12331f;--doneLine:#1c5b45;
+  }
+  html[data-theme="light"]{
+    --bg:#f4f7fd;--bg2:#eef3fc;--panel:#ffffff;--panel2:#eef3fc;--ink:#111a33;--mut:#51618a;
+    --line:#d6def0;--accent:#2f5fd0;--accent2:#12897c;--good:#1a9e6f;--warn:#b7791f;--code:#f3f6fc;
+    --glow1:#dbe6fb;--glow2:#dcefec;--codeink:#1c2b52;--codegreen:#0b6b52;--codeblue:#274690;--h3:#274690;
+    --doneBg:#e6f7ee;--doneLine:#8fd3b4;
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#1a2550 0,transparent 60%),
-    radial-gradient(1000px 600px at -10% 10%,#132a2b 0,transparent 55%),var(--bg);
+  body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,var(--glow1) 0,transparent 60%),
+    radial-gradient(1000px 600px at -10% 10%,var(--glow2) 0,transparent 55%),var(--bg);
     color:var(--ink);font:15.5px/1.65 -apple-system,Segoe UI,Roboto,Inter,system-ui,sans-serif}
   a{color:var(--accent)}
+  .themebtn{position:fixed;top:14px;right:16px;z-index:50;cursor:pointer;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:700;
+    box-shadow:0 2px 10px rgba(0,0,0,.18)}
+  .themebtn:hover{border-color:var(--accent)}
   .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px}
   header{padding:46px 0 24px;text-align:center}
   header .kick{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);font-weight:800}
@@ -36,9 +48,9 @@
   .stepnum{flex:0 0 34px;width:34px;height:34px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent2));
     color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:16px}
   .goal{color:var(--mut);font-size:14px;margin:6px 0 14px}
-  h3{font-size:15px;margin:18px 0 8px;color:#cdd8ff}
+  h3{font-size:15px;margin:18px 0 8px;color:var(--h3)}
   .path{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;
-    color:#bcd0ff;margin:8px 0;font-family:Consolas,Menlo,monospace;overflow-wrap:anywhere}
+    color:var(--codeblue);margin:8px 0;font-family:Consolas,Menlo,monospace;overflow-wrap:anywhere}
   .path b{color:var(--accent2)}
   .note{border-left:3px solid var(--accent2);background:var(--panel2);border-radius:0 10px 10px 0;padding:10px 14px;
     margin:12px 0;color:var(--mut);font-size:13.5px}
@@ -47,10 +59,10 @@
   th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
   th{background:var(--panel2);color:var(--mut);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
   td code,.ic{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:1px 6px;
-    font-family:Consolas,Menlo,monospace;font-size:12.5px;color:#8ff0c8;overflow-wrap:anywhere}
+    font-family:Consolas,Menlo,monospace;font-size:12.5px;color:var(--codegreen);overflow-wrap:anywhere}
   .codewrap{position:relative;margin:10px 0}
   pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px 14px;overflow:auto;
-    font-size:12.5px;line-height:1.5;font-family:Consolas,Menlo,monospace;color:#d6e2ff}
+    font-size:12.5px;line-height:1.5;font-family:Consolas,Menlo,monospace;color:var(--codeink)}
   .copy{position:absolute;top:8px;right:8px;cursor:pointer;border:1px solid var(--line);background:var(--panel2);
     color:var(--mut);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700}
   .copy:hover{color:var(--ink);border-color:var(--accent)}
@@ -62,12 +74,13 @@
   .mermaid{background:var(--code);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0;text-align:center;overflow:auto}
   .legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:8px;font-size:12px;color:var(--mut)}
   .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:5px}
-  .done{margin-top:14px;padding:10px 14px;background:#12331f;border:1px solid #1c5b45;border-radius:10px;color:var(--good);font-size:13.5px;font-weight:600}
+  .done{margin-top:14px;padding:10px 14px;background:var(--doneBg);border:1px solid var(--doneLine);border-radius:10px;color:var(--good);font-size:13.5px;font-weight:600}
   footer{text-align:center;color:var(--mut);font-size:12.5px;margin-top:30px}
   .kbd{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:12px}
 </style>
 </head>
 <body>
+<button class="themebtn" id="themeToggle" title="Toggle light / dark">🌙 Dark</button>
 <div class="wrap">
 <header>
   <div class="kick">Meridian Group · Challenge 3 · learn-by-doing</div>
@@ -150,6 +163,7 @@ flowchart TB
     <a href="#s1"><b>1</b>Deploy 2 models</a>
     <a href="#s2"><b>2</b>Create 5 indexes</a>
     <a href="#s3"><b>3</b>Ingest &amp; chunk (sources)</a>
+    <a href="#s3b"><b>3b</b>Ingestion pipeline</a>
     <a href="#s4"><b>4</b>5 Knowledge Sources</a>
     <a href="#s5"><b>5</b>3 Knowledge Bases</a>
     <a href="#s6"><b>6</b>1 Foundry agent</a>
@@ -320,7 +334,103 @@ Content-Type: application/json
   <div class="done">✅ Done when: each index's <b>Document count</b> is &gt; 0 (e.g. employment-law ≈ 51, learning-development ≈ 142) and the indexer's last run shows <b>Success</b>.</div>
 </section>
 
-<!-- STEP 4 -->
+<!-- STEP 3b — INGESTION PIPELINE -->
+<section id="s3b">
+  <h2><span class="stepnum">3b</span> Make it a pipeline (so tomorrow's new file just works)</h2>
+  <div class="goal">A one-off load is fine for a demo, but when someone drops a <b>new</b> file next week it must be chunked, embedded, tagged and indexed automatically. Two production patterns — pick per source.</div>
+  <div class="mermaid">
+flowchart LR
+    subgraph PA["Pattern A · Pull (event-driven, zero-touch)"]
+      U1["User drops file<br/>in Blob / SharePoint"] --> IX["Search indexer<br/>(scheduled)"]
+      IX --> SK["Skillset<br/>Split + Embed"] --> PR["Index projections<br/>1 doc per chunk"] --> IDX1["hriq-* index"]
+    end
+    subgraph PB["Pattern B · Push (app / API-driven)"]
+      U2["Upload in app<br/>or call API"] --> APP["Loader service<br/>extract→chunk→embed→tag"] --> IDX2["hriq-* index"]
+    end
+    classDef a fill:#0f766e,stroke:#08403b,color:#fff; classDef b fill:#0369a1,stroke:#083344,color:#fff;
+    class U1,IX,SK,PR,IDX1 a; class U2,APP,IDX2 b;
+  </div>
+  <table>
+    <tr><th></th><th>A · Pull (indexer)</th><th>B · Push (app / API)</th></tr>
+    <tr><td>Trigger</td><td>file lands in Blob/SharePoint → indexer runs on a schedule</td><td>user clicks upload / calls the endpoint</td></tr>
+    <tr><td>Chunk + embed</td><td>Azure does it (skillset)</td><td>your code does it</td></tr>
+    <tr><td>Best for</td><td>document libraries that change over time</td><td>interactive uploads, custom logic + RBAC</td></tr>
+    <tr><td>In this project</td><td>wire the Blob indexer below</td><td><b>already built</b> — the app's <span class="ic">Data → Load your own documents</span> button + <span class="ic">/api/load-documents</span></td></tr>
+  </table>
+
+  <h3>Auto-tag RBAC at ingest (the key to "just works")</h3>
+  <div class="goal">A new file's access groups must be derived automatically, never typed by hand. The rule maps <b>jurisdiction → group</b>, and the pipeline stamps <span class="ic">groupIds</span> on every chunk:</div>
+  <table>
+    <tr><th>Detected jurisdiction</th><th>Auto <span class="ic">groupIds</span></th><th>Who can retrieve it</th></tr>
+    <tr><td>Germany</td><td>["HR-DE"]</td><td>German HR users only</td></tr>
+    <tr><td>United Kingdom</td><td>["HR-UK"]</td><td>UK HR users only</td></tr>
+    <tr><td>United States</td><td>["HR-US"]</td><td>US HR users only</td></tr>
+    <tr><td>EU (e.g. GDPR)</td><td>["HR-EU","HR-Global"]</td><td>everyone</td></tr>
+    <tr><td>Global</td><td>["HR-Global"]</td><td>everyone</td></tr>
+  </table>
+  <div class="note">The HRIQ web app already does this: the <b>Data → Load your own documents</b> loader infers <span class="ic">jurisdiction</span> from the file, applies the matching <span class="ic">groupIds</span> automatically, ensures the field exists on the index, then chunks → embeds → upserts. A German file uploaded tomorrow lands tagged <span class="ic">["HR-DE"]</span> with zero manual JSON — and the Data tab shows the applied Access (groupIds) per file.</div>
+
+  <h3>Pattern A · Blob "drop-and-forget" indexer — end to end</h3>
+  <div class="goal">Wire it once; thereafter any file dropped into the container is auto-ingested on the schedule. All four objects are created against your search service (portal <b>Import and vectorize data</b> builds them for you, or REST as below).</div>
+  <table>
+    <tr><th>#</th><th>Object</th><th>What to set (valid values)</th></tr>
+    <tr><td>1</td><td>Grant access</td><td>Search service <b>managed identity</b> → <b>Storage Blob Data Reader</b> on <span class="ic">hriqstorage5600</span></td></tr>
+    <tr><td>2</td><td>Data source</td><td>type <span class="ic">azureblob</span> · container <span class="ic">https://hriqstorage5600.blob.core.windows.net/meridian-hr-blobs</span> · auth = managed identity (ResourceId)</td></tr>
+    <tr><td>3</td><td>Skillset</td><td>SplitSkill (1100 / 150) → AzureOpenAIEmbeddingSkill (<span class="ic">text-embedding-3-large-2</span>) + index projections (1 doc per chunk)</td></tr>
+    <tr><td>4</td><td>Indexer</td><td>data source → skillset → index <span class="ic">hriq-employment-law</span> · schedule e.g. every 1 hour</td></tr>
+  </table>
+  <div class="tabs"><span class="tab active" data-t="ds">2 · Data source</span><span class="tab" data-t="sk">3 · Skillset + projections</span><span class="tab" data-t="ix">4 · Indexer + schedule</span></div>
+  <div class="tabpane active" data-p="ds">
+  <div class="codewrap"><button class="copy">Copy</button><pre>PUT https://&lt;your-search&gt;.search.windows.net/datasources/hr-blob-ds?api-version=2024-07-01
+{
+  "name": "hr-blob-ds",
+  "type": "azureblob",
+  "credentials": { "connectionString":
+    "ResourceId=/subscriptions/4a751d0a-a8ef-44f2-b08f-05b8d87d959a/resourceGroups/rg-hriq-foundry-iq/providers/Microsoft.Storage/storageAccounts/hriqstorage5600;" },
+  "container": { "name": "meridian-hr-blobs" }
+}</pre></div>
+  </div>
+  <div class="tabpane" data-p="sk">
+  <div class="codewrap"><button class="copy">Copy</button><pre>PUT .../skillsets/hr-chunk-embed-ss?api-version=2024-07-01
+{
+  "name": "hr-chunk-embed-ss",
+  "skills": [
+    { "@odata.type": "#Microsoft.Skills.Text.SplitSkill",
+      "textSplitMode": "pages", "maximumPageLength": 1100, "pageOverlapLength": 150,
+      "inputs": [{ "name": "text", "source": "/document/content" }],
+      "outputs": [{ "name": "textItems", "targetName": "chunks" }] },
+    { "@odata.type": "#Microsoft.Skills.Text.AzureOpenAIEmbeddingSkill",
+      "resourceUri": "https://swarupmishra-learnv1-resource.services.ai.azure.com",
+      "deploymentId": "text-embedding-3-large-2", "modelName": "text-embedding-3-large",
+      "inputs": [{ "name": "text", "source": "/document/chunks/*" }],
+      "outputs": [{ "name": "embedding", "targetName": "content_vector" }] }
+  ],
+  "indexProjections": { "selectors": [{
+    "targetIndexName": "hriq-employment-law",
+    "parentKeyFieldName": "parent_id", "sourceContext": "/document/chunks/*",
+    "mappings": [
+      { "name": "content", "source": "/document/chunks/*" },
+      { "name": "content_vector", "source": "/document/chunks/*/content_vector" },
+      { "name": "jurisdiction", "source": "/document/jurisdiction" },
+      { "name": "groupIds", "source": "/document/groupIds" } ] }] }
+}</pre></div>
+  <div class="note">To auto-derive <span class="ic">groupIds</span> in Pattern A, put the jurisdiction/groups on each blob as <b>blob metadata</b> (or a companion JSON) and map it in projections, or add a tiny custom WebApi skill that applies the jurisdiction→group rule. In Pattern B the app does this in code already.</div>
+  </div>
+  <div class="tabpane" data-p="ix">
+  <div class="codewrap"><button class="copy">Copy</button><pre>PUT .../indexers/hr-blob-indexer?api-version=2024-07-01
+{
+  "name": "hr-blob-indexer",
+  "dataSourceName": "hr-blob-ds",
+  "skillsetName": "hr-chunk-embed-ss",
+  "targetIndexName": "hriq-employment-law",
+  "schedule": { "interval": "PT1H" },
+  "parameters": { "configuration": { "dataToExtract": "contentAndMetadata" } }
+}</pre></div>
+  <div class="note">After creating it, <b>Run</b> once. Then every drop into <span class="ic">meridian-hr-blobs</span> is picked up on the next hourly pass — drop-and-forget.</div>
+  </div>
+  <div class="note warn">⚠️ <span class="ic">hriqstorage5600</span> is <b>publicNetworkAccess=Disabled</b> (AAD-only, private). The indexer reaches it via the search service's <b>managed identity</b> over a trusted-service / shared-private-link path — not a laptop.</div>
+  <div class="done">✅ Done when: drop a new PDF into the container → within the schedule window the index's <b>Document count</b> rises and the new chunks carry <span class="ic">jurisdiction</span> + <span class="ic">groupIds</span>.</div>
+</section>
 <section id="s4">
   <h2><span class="stepnum">4</span> Create the 5 Knowledge Sources</h2>
   <div class="goal">A <b>Knowledge Source</b> wraps one index and tells Foundry IQ which fields to return for citations.
@@ -541,12 +651,50 @@ conversations during leave?</pre></div>
 
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>
-  mermaid.initialize({startOnLoad:true,theme:'dark',securityLevel:'loose',flowchart:{curve:'basis'}});
+  // --- theme (light / dark) with mermaid re-render ---
+  const mermaidSrc = [];
+  document.querySelectorAll('.mermaid').forEach((el,i)=>{ mermaidSrc[i]=el.textContent; el.dataset.mi=i; });
+
+  function renderMermaid(theme){
+    mermaid.initialize({startOnLoad:false,theme:theme,securityLevel:'loose',flowchart:{curve:'basis'}});
+    document.querySelectorAll('.mermaid').forEach(el=>{
+      el.removeAttribute('data-processed');
+      el.innerHTML = mermaidSrc[el.dataset.mi];
+    });
+    mermaid.run({querySelector:'.mermaid'});
+  }
+  function applyTheme(t){
+    document.documentElement.setAttribute('data-theme', t);
+    const btn=document.getElementById('themeToggle');
+    btn.textContent = t==='light' ? '☀️ Light' : '🌙 Dark';
+    try{ localStorage.setItem('hriq-guide-theme', t); }catch(e){}
+    renderMermaid(t==='light' ? 'default' : 'dark');
+  }
+  const saved = (()=>{ try{return localStorage.getItem('hriq-guide-theme');}catch(e){return null;} })();
+  applyTheme(saved || 'dark');
+  document.getElementById('themeToggle').addEventListener('click',()=>{
+    const cur=document.documentElement.getAttribute('data-theme');
+    applyTheme(cur==='light' ? 'dark' : 'light');
+  });
+
   // copy buttons
   document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{
     const pre=b.parentElement.querySelector('pre');
     navigator.clipboard.writeText(pre.innerText).then(()=>{const t=b.textContent;b.textContent='Copied ✓';setTimeout(()=>b.textContent=t,1200);});
   }));
+
+  // code tabs (data source / skillset / indexer)
+  document.querySelectorAll('.tabs').forEach(group=>{
+    const tabs=group.querySelectorAll('.tab');
+    const panes=group.parentElement.querySelectorAll('.tabpane');
+    tabs.forEach(tab=>tab.addEventListener('click',()=>{
+      tabs.forEach(t=>t.classList.remove('active'));
+      panes.forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      const pane=group.parentElement.querySelector('.tabpane[data-p="'+tab.dataset.t+'"]');
+      if(pane) pane.classList.add('active');
+    }));
+  });
 </script>
 </body>
 </html>
